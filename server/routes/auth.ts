@@ -656,4 +656,187 @@ router.get(
   }
 );
 
+// ==================================================
+// FORGOT PASSWORD
+// POST /api/auth/forgot-password
+// ==================================================
+
+router.post(
+  "/forgot-password",
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      // ----------------------------------------
+      // Validation
+      // ----------------------------------------
+
+      if (!email) {
+        return res.status(400).json({
+          message: "Email is required",
+        });
+      }
+
+      const normalizedEmail = String(email)
+        .trim()
+        .toLowerCase();
+
+      // ----------------------------------------
+      // Find user by email
+      // ----------------------------------------
+
+      const result = await pool.query(
+        `SELECT
+          id,
+          email,
+          name,
+          role
+         FROM users
+         WHERE LOWER(email) = $1`,
+        [normalizedEmail]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "Email not found",
+        });
+      }
+
+      const user = result.rows[0];
+
+      // ----------------------------------------
+      // Response
+      // ----------------------------------------
+
+      return res.status(200).json({
+        message: "Email verified. Proceed to reset password.",
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Forgot password error:",
+        error
+      );
+
+      return res.status(500).json({
+        message:
+          "Failed to process password reset request",
+      });
+    }
+  }
+);
+
+// ==================================================
+// RESET PASSWORD
+// POST /api/auth/reset-password
+// ==================================================
+
+router.post(
+  "/reset-password",
+  async (req: Request, res: Response) => {
+    try {
+      const {
+        email,
+        newPassword,
+        confirmPassword,
+      } = req.body;
+
+      // ----------------------------------------
+      // Validation
+      // ----------------------------------------
+
+      if (!email || !newPassword || !confirmPassword) {
+        return res.status(400).json({
+          message:
+            "Email, password, and password confirmation are required",
+        });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+          message: "Passwords do not match",
+        });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          message:
+            "Password must be at least 8 characters",
+        });
+      }
+
+      const normalizedEmail = String(email)
+        .trim()
+        .toLowerCase();
+
+      // ----------------------------------------
+      // Find user by email
+      // ----------------------------------------
+
+      const result = await pool.query(
+        `SELECT
+          id,
+          email,
+          role
+         FROM users
+         WHERE LOWER(email) = $1`,
+        [normalizedEmail]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "Email not found",
+        });
+      }
+
+      const user = result.rows[0];
+
+      // ----------------------------------------
+      // Hash new password
+      // ----------------------------------------
+
+      const passwordHash =
+        await bcrypt.hash(newPassword, 10);
+
+      // ----------------------------------------
+      // Update password in database
+      // ----------------------------------------
+
+      await pool.query(
+        `UPDATE users
+         SET password_hash = $1
+         WHERE id = $2`,
+        [passwordHash, user.id]
+      );
+
+      // ----------------------------------------
+      // Response
+      // ----------------------------------------
+
+      return res.status(200).json({
+        message: "Password reset successful",
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Reset password error:",
+        error
+      );
+
+      return res.status(500).json({
+        message: "Failed to reset password",
+      });
+    }
+  }
+);
+
 export default router;

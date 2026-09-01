@@ -1017,7 +1017,7 @@ function DonorLoginPage({ navigate, onLogin }: any) {
         <Input label="Password" type="password" value={form.pass} onChange={(e: any) => setForm({ ...form, pass: e.target.value })} icon={Shield} placeholder="Your password" />
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" /> Remember me</label>
-          <button className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
+          <button onClick={() => navigate("forgot-password")} className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
         </div>
         <Btn size="lg" className="w-full" onClick={handleSubmit}>Sign In <ArrowRight size={16} /></Btn>
         <div className="text-center text-xs text-muted-foreground py-2">— or continue as Admin —</div>
@@ -1159,7 +1159,7 @@ function NGOLoginPage({ navigate, onLogin }: any) {
         <Input label="Password" type="password" value={form.pass} onChange={(e: any) => setForm({ ...form, pass: e.target.value })} icon={Shield} />
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" defaultChecked /> Remember me</label>
-          <button className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
+          <button onClick={() => navigate("forgot-password")} className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
         </div>
         <Btn size="lg" className="w-full" onClick={handleSubmit}>Sign In <ArrowRight size={16} /></Btn>
       </div>
@@ -2606,6 +2606,227 @@ function AdminSettings({ navigate }: any) {
   );
 }
 
+// ─── FORGOT PASSWORD PAGE ─────────────────────────────────────────────────────
+
+function ForgotPasswordPage({ navigate }: any) {
+  const [email, setEmail] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRequestReset = async () => {
+    if (!email) {
+      setErrorMsg("Email is required");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/forgot-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMsg(data?.message || "Failed to process request");
+        setIsLoading(false);
+        return;
+      }
+
+      // Email verified - save to session and proceed to reset password
+      window.sessionStorage.setItem("resetPasswordEmail", email);
+      navigate("reset-password");
+    } catch (error) {
+      setErrorMsg("Failed to process password reset request");
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AuthLayout
+      title="Reset Your Password"
+      sub="Enter your email to create a new password."
+      imgUrl="photo-1504674900247-0877df9cc836"
+      navigate={navigate}
+      switchLink="donor-login"
+      switchText="Remember your password?"
+      switchAction="Back to Login"
+    >
+      <div className="space-y-4">
+        <Input
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={(e: any) => {
+            setEmail(e.target.value);
+            setErrorMsg("");
+          }}
+          icon={Mail}
+          placeholder="you@restaurant.com"
+        />
+        {errorMsg && (
+          <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
+            {errorMsg}
+          </div>
+        )}
+        <Btn
+          size="lg"
+          className="w-full"
+          onClick={handleRequestReset}
+          disabled={isLoading}
+        >
+          {isLoading ? "Verifying..." : "Send Reset Instructions"} <ArrowRight size={16} />
+        </Btn>
+      </div>
+    </AuthLayout>
+  );
+}
+
+// ─── RESET PASSWORD PAGE ───────────────────────────────────────────────────────
+
+function ResetPasswordPage({ navigate }: any) {
+  const [email, setEmail] = useState("");
+  const [form, setForm] = useState({ pass: "", confirm: "" });
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Extract email from sessionStorage on mount
+  useEffect(() => {
+    const storedEmail = window.sessionStorage.getItem("resetPasswordEmail");
+    if (storedEmail) {
+      setEmail(storedEmail);
+    }
+  }, []);
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setErrorMsg("Email is missing. Start from forgot password.");
+      return;
+    }
+
+    if (!form.pass || !form.confirm) {
+      setErrorMsg("Both password fields are required");
+      return;
+    }
+
+    if (form.pass !== form.confirm) {
+      setErrorMsg("Passwords do not match");
+      return;
+    }
+
+    if (form.pass.length < 8) {
+      setErrorMsg("Password must be at least 8 characters");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/reset-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email,
+            newPassword: form.pass,
+            confirmPassword: form.confirm,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMsg(data?.message || "Password reset failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // Success message and redirect
+      setSuccessMsg("✓ Password changed successfully!");
+      window.sessionStorage.removeItem("resetPasswordEmail");
+      setTimeout(() => {
+        navigate("donor-login");
+      }, 1500);
+    } catch (error) {
+      setErrorMsg("Failed to reset password");
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AuthLayout
+      title="Create New Password"
+      sub="Enter a strong password to secure your account."
+      imgUrl="photo-1504674900247-0877df9cc836"
+      navigate={navigate}
+      switchLink="forgot-password"
+      switchText="Need to start over?"
+      switchAction="Back to Forgot Password"
+    >
+      <div className="space-y-4">
+        <div className="bg-blue-50 text-blue-700 text-xs p-2 rounded border border-blue-200">
+          ℹ Resetting password for: <span className="font-semibold">{email}</span>
+        </div>
+
+        <Input
+          label="New Password"
+          type="password"
+          placeholder="Min. 8 characters"
+          value={form.pass}
+          onChange={(e: any) => {
+            setForm({ ...form, pass: e.target.value });
+            setErrorMsg("");
+          }}
+          icon={Shield}
+          required
+        />
+        <Input
+          label="Confirm Password"
+          type="password"
+          placeholder="Repeat password"
+          value={form.confirm}
+          onChange={(e: any) => {
+            setForm({ ...form, confirm: e.target.value });
+            setErrorMsg("");
+          }}
+          icon={Shield}
+          required
+        />
+        {errorMsg && (
+          <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
+            {errorMsg}
+          </div>
+        )}
+        {successMsg && (
+          <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded border border-emerald-200">
+            {successMsg}
+          </div>
+        )}
+        <Btn
+          size="lg"
+          className="w-full"
+          onClick={handleResetPassword}
+          disabled={isLoading || !email}
+        >
+          {isLoading ? "Resetting..." : "Reset Password"}
+        </Btn>
+      </div>
+    </AuthLayout>
+  );
+}
+
+
 // ─── APP ROUTER ───────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -2664,6 +2885,8 @@ export default function App() {
   if (view === "ngo-login")      return <NGOLoginPage navigate={navigate} onLogin={(user: any) => handleLogin("ngo", user)} />;
   if (view === "ngo-register")   return <NGORegisterPage navigate={navigate} />;
   if (view === "admin-login")    return <AdminLoginPage navigate={navigate} onLogin={() => handleLogin("admin")} />;
+  if (view === "forgot-password") return <ForgotPasswordPage navigate={navigate} />;
+  if (view === "reset-password") return <ResetPasswordPage navigate={navigate} />;
 
   // Dashboard routes — all wrapped in DashboardLayout
   const currentRole = role === "public" ? "donor" : role;
