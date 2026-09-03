@@ -349,7 +349,7 @@ function Footer({ navigate }: any) {
 
 // ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────────
 
-function DashboardLayout({ children, role, view, navigate, onLogout, userName }: any) {
+function DashboardLayout({ children, role, view, navigate, onLogout }: any) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const donorNav = [
@@ -387,11 +387,9 @@ function DashboardLayout({ children, role, view, navigate, onLogout, userName }:
   ];
 
   const navItems = role === "donor" ? donorNav : role === "ngo" ? ngoNav : adminNav;
-  const donorDisplayName = userName || "Priya Sharma";
-  const ngoDisplayName = userName || "NGO";
   const roleMeta: any = {
-    donor: { label: "Donor Account", color: "bg-emerald-600", name: donorDisplayName },
-    ngo: { label: "NGO Account", color: "bg-blue-600", name: ngoDisplayName },
+    donor: { label: "Donor Account", color: "bg-emerald-600", name: "Priya Sharma" },
+    ngo: { label: "NGO Account", color: "bg-blue-600", name: "Roti Bank Mumbai" },
     admin: { label: "Administrator", color: "bg-purple-600", name: "Admin Panel" },
   };
   const meta = roleMeta[role];
@@ -1017,7 +1015,7 @@ function DonorLoginPage({ navigate, onLogin }: any) {
         <Input label="Password" type="password" value={form.pass} onChange={(e: any) => setForm({ ...form, pass: e.target.value })} icon={Shield} placeholder="Your password" />
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" /> Remember me</label>
-          <button onClick={() => navigate("forgot-password")} className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
+          <button className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
         </div>
         <Btn size="lg" className="w-full" onClick={handleSubmit}>Sign In <ArrowRight size={16} /></Btn>
         <div className="text-center text-xs text-muted-foreground py-2">— or continue as Admin —</div>
@@ -1029,52 +1027,8 @@ function DonorLoginPage({ navigate, onLogin }: any) {
 
 function DonorRegisterPage({ navigate }: any) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", type: "restaurant", org: "", address: "", city: "", pass: "", confirm: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", type: "restaurant", org: "", address: "", pass: "", confirm: "" });
   const f = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
-
-  const handleSubmit = async () => {
-    const donorTypeMap: Record<string, string> = {
-      restaurant: "Restaurant / Eatery",
-      hotel: "Hotel / Resort",
-      catering: "Catering Service",
-      grocery: "Grocery / Supermarket",
-      individual: "Individual / Household",
-    };
-
-    try {
-      const payload = {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        password: form.pass,
-        confirmPassword: form.confirm,
-        role: "DONOR",
-        donor_type: donorTypeMap[form.type] || form.type,
-        organization_name: form.org,
-        address: form.address,
-        city: form.city,
-        termsAccepted: true,
-      };
-
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Donor registration failed");
-      }
-
-      navigate("donor-login");
-    } catch (error) {
-      console.error("Donor registration failed:", error);
-      alert(error instanceof Error ? error.message : "Donor registration failed");
-    }
-  };
-
   return (
     <AuthLayout title="Create Donor Account" sub="Start rescuing food in under 2 minutes." imgUrl="photo-1512621776951-a57141f2eefd" navigate={navigate} switchLink="donor-login" switchText="Already have an account?" switchAction="Sign In">
       <div className="flex items-center gap-2 mb-8">
@@ -1099,7 +1053,6 @@ function DonorRegisterPage({ navigate }: any) {
           <Select label="Donor Type" value={form.type} onChange={f("type")} required options={[{ value: "restaurant", label: "Restaurant / Eatery" }, { value: "hotel", label: "Hotel / Resort" }, { value: "catering", label: "Catering Service" }, { value: "grocery", label: "Grocery / Supermarket" }, { value: "individual", label: "Individual / Household" }]} />
           <Input label="Organization Name" placeholder="The Grand Spice Restaurant" value={form.org} onChange={f("org")} icon={Building} />
           <Textarea label="Address" placeholder="Full address with landmark" value={form.address} onChange={f("address")} rows={3} required />
-          <Input label="City" placeholder="Bhubaneswar" value={form.city} onChange={f("city")} icon={Building} required />
           <div className="flex gap-3">
             <Btn variant="outline" size="lg" className="flex-1" onClick={() => setStep(1)}>Back</Btn>
             <Btn size="lg" className="flex-1" onClick={() => setStep(3)}>Continue <ArrowRight size={16} /></Btn>
@@ -1116,7 +1069,7 @@ function DonorRegisterPage({ navigate }: any) {
           </label>
           <div className="flex gap-3">
             <Btn variant="outline" size="lg" className="flex-1" onClick={() => setStep(2)}>Back</Btn>
-            <Btn size="lg" className="flex-1" onClick={handleSubmit}>Create Account</Btn>
+            <Btn size="lg" className="flex-1" onClick={() => navigate("donor-login")}>Create Account</Btn>
           </div>
         </div>
       )}
@@ -1125,43 +1078,16 @@ function DonorRegisterPage({ navigate }: any) {
 }
 
 function NGOLoginPage({ navigate, onLogin }: any) {
-  const [form, setForm] = useState({ email: "contact@rotibank.org", pass: "••••••••" });
-
-  const handleSubmit = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.pass,
-          role: "NGO",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "NGO login failed");
-      }
-
-      onLogin(data.user);
-    } catch (error) {
-      console.error("NGO login failed:", error);
-      alert(error instanceof Error ? error.message : "NGO login failed");
-    }
-  };
-
   return (
     <AuthLayout title="NGO Portal Sign In" sub="Access the food discovery and request management portal." imgUrl="photo-1559027615-cd4628902d4a" navigate={navigate} switchLink="ngo-register" switchText="New NGO?" switchAction="Register Your NGO">
       <div className="space-y-4">
-        <Input label="Email Address" type="email" value={form.email} onChange={(e: any) => setForm({ ...form, email: e.target.value })} icon={Mail} />
-        <Input label="Password" type="password" value={form.pass} onChange={(e: any) => setForm({ ...form, pass: e.target.value })} icon={Shield} />
+        <Input label="Email Address" type="email" value="contact@rotibank.org" onChange={() => {}} icon={Mail} />
+        <Input label="Password" type="password" value="••••••••" onChange={() => {}} icon={Shield} />
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" defaultChecked /> Remember me</label>
-          <button onClick={() => navigate("forgot-password")} className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
+          <button className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
         </div>
-        <Btn size="lg" className="w-full" onClick={handleSubmit}>Sign In <ArrowRight size={16} /></Btn>
+        <Btn size="lg" className="w-full" onClick={onLogin}>Sign In <ArrowRight size={16} /></Btn>
       </div>
     </AuthLayout>
   );
@@ -1169,54 +1095,8 @@ function NGOLoginPage({ navigate, onLogin }: any) {
 
 function NGORegisterPage({ navigate }: any) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", cat: "food-relief", reg: "", address: "", city: "", capacity: "", pass: "", confirm: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", cat: "food-relief", reg: "", address: "", capacity: "", pass: "" });
   const f = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
-
-  const handleSubmit = async () => {
-    const ngoCategoryMap: Record<string, string> = {
-      "food-relief": "Food Relief",
-      "community-kitchen": "Community Kitchen",
-      orphanage: "Orphanage / Children Home",
-      "old-age": "Old Age Home",
-      school: "School Nutrition",
-      "slum-outreach": "Slum Outreach",
-    };
-
-    try {
-      const payload = {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        password: form.pass,
-        confirmPassword: form.confirm,
-        role: "NGO",
-        ngo_category: ngoCategoryMap[form.cat] || form.cat,
-        registration_number: form.reg,
-        address: form.address,
-        city: form.city,
-        daily_meal_capacity: Number(form.capacity),
-        termsAccepted: true,
-      };
-
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "NGO registration failed");
-      }
-
-      navigate("ngo-login");
-    } catch (error) {
-      console.error("NGO registration failed:", error);
-      alert(error instanceof Error ? error.message : "NGO registration failed");
-    }
-  };
-
   return (
     <AuthLayout title="Register Your NGO" sub="Join 120+ verified NGOs rescuing food daily." imgUrl="photo-1488521787991-ed7bbaae773c" navigate={navigate} switchLink="ngo-login" switchText="Already registered?" switchAction="Sign In">
       <div className="flex items-center gap-2 mb-8">
@@ -1241,7 +1121,6 @@ function NGORegisterPage({ navigate }: any) {
         <div className="space-y-4">
           <Input label="Registration Number" placeholder="MH/NGO/2024/XXXX" value={form.reg} onChange={f("reg")} icon={Hash} required />
           <Textarea label="Address" placeholder="Full address of your NGO" value={form.address} onChange={f("address")} rows={3} required />
-          <Input label="City" placeholder="Bhubaneswar" value={form.city} onChange={f("city")} icon={Building} required />
           <Input label="Daily Meal Capacity" type="number" placeholder="200" value={form.capacity} onChange={f("capacity")} icon={Utensils} />
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
             <AlertTriangle size={12} className="inline mr-1" /> Upload NGO registration documents after signup. Verification takes 24–48 hours.
@@ -1255,14 +1134,14 @@ function NGORegisterPage({ navigate }: any) {
       {step === 3 && (
         <div className="space-y-4">
           <Input label="Password" type="password" placeholder="Min. 8 characters" value={form.pass} onChange={f("pass")} icon={Shield} required />
-          <Input label="Confirm Password" type="password" placeholder="Repeat password" value={form.confirm} onChange={f("confirm")} icon={Shield} required />
+          <Input label="Confirm Password" type="password" placeholder="Repeat password" value="" onChange={() => {}} icon={Shield} required />
           <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
             <input type="checkbox" className="mt-0.5 rounded" />
             I confirm all information submitted is accurate and I agree to ResQMeal's Terms of Service.
           </label>
           <div className="flex gap-3">
             <Btn variant="outline" size="lg" className="flex-1" onClick={() => setStep(2)}>Back</Btn>
-            <Btn size="lg" className="flex-1" onClick={handleSubmit}>Submit for Review</Btn>
+            <Btn size="lg" className="flex-1" onClick={() => navigate("ngo-login")}>Submit for Review</Btn>
           </div>
         </div>
       )}
@@ -1306,12 +1185,11 @@ function AdminLoginPage({ navigate, onLogin }: any) {
 
 // ─── DONOR PAGES ──────────────────────────────────────────────────────────────
 
-function DonorDashboard({ navigate, userName }: any) {
+function DonorDashboard({ navigate }: any) {
   const chartData = MONTHLY_DATA.slice(-6);
-  const donorDisplayName = userName || "Donor";
   return (
     <div>
-      <PageHeader title={`Good morning, ${donorDisplayName.split(" ")[0]}! 👋`} sub="Here's what's happening with your donations today." actions={<Btn onClick={() => navigate("donor-add-food")}><Plus size={16} /> Add Food</Btn>} />
+      <PageHeader title="Good morning, Priya! 👋" sub="Here's what's happening with your donations today." actions={<Btn onClick={() => navigate("donor-add-food")}><Plus size={16} /> Add Food</Btn>} />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon={Package} label="Total Donations" value="48" sub="+3 this week" color="emerald" />
         <StatCard icon={Utensils} label="Meals Rescued" value="2,840" sub="↑ 12% vs last month" color="amber" />
@@ -1465,14 +1343,91 @@ function DonorAddFood({ navigate }: any) {
   );
 }
 
-function DonorMyDonations({ navigate }: any) {
+function DonorMyDonations({ navigate, authUser }: any) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const statuses = ["all", "available", "requested", "accepted", "completed", "expired"];
-  const filtered = FOOD_ITEMS.filter(f => (filter === "all" || f.status === filter) && f.title.toLowerCase().includes(search.toLowerCase()));
+  const [donations, setDonations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    const fetchDonations = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMsg("");
+
+        if (!authUser?.id) {
+          setErrorMsg("Donor information not found.");
+          return;
+        }
+
+        const response = await fetch(
+          `http://localhost:5000/api/food?user_id=${authUser.id}`
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.message || "Failed to fetch your donations");
+        }
+
+        setDonations((data.foods || []).map((food: any) => ({
+          id: food.id,
+          title: food.food_item,
+          category: food.category,
+          qty: food.quantity,
+          unit: food.unit,
+          status: String(food.status || "").toLowerCase(),
+          img: food.img || "photo-1504674900247-0877df9cc836",
+          location: food.location,
+          pickup: [food.pickup_start, food.pickup_end]
+            .filter(Boolean)
+            .map((time: string) => new Date(time).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }))
+            .join(" – ") || "Not specified",
+          posted: food.posted_at
+            ? new Date(food.posted_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+            : "",
+        })));
+      } catch (error) {
+        console.error("Failed to fetch my donations:", error);
+        setErrorMsg(error instanceof Error ? error.message : "Failed to fetch your donations");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDonations();
+  }, [authUser]);
+
+  const filtered = donations.filter(f =>
+    (filter === "all" || f.status === filter) &&
+    f.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="My Donations" sub="Loading your donations..." actions={<Btn onClick={() => navigate("donor-add-food")}><Plus size={16} /> Add Food</Btn>} />
+        <div className="flex items-center justify-center py-20"><RefreshCw size={28} className="animate-spin text-emerald-600" /></div>
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div>
+        <PageHeader title="My Donations" sub="Unable to load your donations." actions={<Btn onClick={() => navigate("donor-add-food")}><Plus size={16} /> Add Food</Btn>} />
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+          <AlertCircle size={30} className="mx-auto text-red-500 mb-3" />
+          <h3 className="font-bold text-red-700 mb-1">Failed to load donations</h3>
+          <p className="text-sm text-red-600">{errorMsg}</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
-      <PageHeader title="My Donations" sub={`${FOOD_ITEMS.length} total donations`} actions={<Btn onClick={() => navigate("donor-add-food")}><Plus size={16} /> Add Food</Btn>} />
+      <PageHeader title="My Donations" sub={`${donations.length} total donations`} actions={<Btn onClick={() => navigate("donor-add-food")}><Plus size={16} /> Add Food</Btn>} />
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -1832,7 +1787,7 @@ function ProfilePage({ role }: any) {
                 </button>
               )}
             </div>
-            <h3 className="font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>{isDonor ? donorDisplayName : isNGO ? "Roti Bank Mumbai" : "Admin"}</h3>
+            <h3 className="font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>{isDonor ? "Priya Sharma" : isNGO ? "Roti Bank Mumbai" : "Admin"}</h3>
             <div className="text-xs text-emerald-600 font-semibold mt-0.5">{isDonor ? "Restaurant Donor" : isNGO ? "Verified NGO" : "Platform Admin"}</div>
             {isNGO && <div className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full mt-2"><Shield size={10} /> Verified</div>}
           </div>
@@ -1852,7 +1807,7 @@ function ProfilePage({ role }: any) {
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
             <h4 className="font-bold text-foreground mb-5" style={{ fontFamily: "var(--font-display)" }}>Profile Information</h4>
             <div className="grid sm:grid-cols-2 gap-5">
-              <Input label="Full Name / Org Name" value={isDonor ? donorDisplayName : "Roti Bank Mumbai"} onChange={() => {}} disabled={!editing} />
+              <Input label="Full Name / Org Name" value={isDonor ? "Priya Sharma" : "Roti Bank Mumbai"} onChange={() => {}} disabled={!editing} />
               <Input label="Email Address" value={isDonor ? "priya@grandspice.com" : "contact@rotibank.org"} onChange={() => {}} disabled={!editing} />
               <Input label="Phone Number" value="+91 98765 43210" onChange={() => {}} disabled={!editing} />
               {isDonor && <Input label="Donor Type" value="Restaurant" onChange={() => {}} disabled={!editing} />}
@@ -1879,11 +1834,10 @@ function ProfilePage({ role }: any) {
 
 // ─── NGO PAGES ────────────────────────────────────────────────────────────────
 
-function NGODashboard({ navigate, userName }: any) {
-  const ngoDisplayName = userName || "Roti Bank Mumbai";
+function NGODashboard({ navigate }: any) {
   return (
     <div>
-      <PageHeader title="NGO Dashboard" sub={`Welcome back, ${ngoDisplayName}!`} actions={<Btn onClick={() => navigate("ngo-browse-food")}><Search size={16} /> Browse Food</Btn>} />
+      <PageHeader title="NGO Dashboard" sub="Welcome back, Roti Bank Mumbai!" actions={<Btn onClick={() => navigate("ngo-browse-food")}><Search size={16} /> Browse Food</Btn>} />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon={Package} label="Food Collected" value="312" sub="+8 this week" color="emerald" />
         <StatCard icon={Utensils} label="Meals Served" value="12,400" sub="This year" color="amber" />
@@ -2606,227 +2560,6 @@ function AdminSettings({ navigate }: any) {
   );
 }
 
-// ─── FORGOT PASSWORD PAGE ─────────────────────────────────────────────────────
-
-function ForgotPasswordPage({ navigate }: any) {
-  const [email, setEmail] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleRequestReset = async () => {
-    if (!email) {
-      setErrorMsg("Email is required");
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMsg("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/forgot-password",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setErrorMsg(data?.message || "Failed to process request");
-        setIsLoading(false);
-        return;
-      }
-
-      // Email verified - save to session and proceed to reset password
-      window.sessionStorage.setItem("resetPasswordEmail", email);
-      navigate("reset-password");
-    } catch (error) {
-      setErrorMsg("Failed to process password reset request");
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <AuthLayout
-      title="Reset Your Password"
-      sub="Enter your email to create a new password."
-      imgUrl="photo-1504674900247-0877df9cc836"
-      navigate={navigate}
-      switchLink="donor-login"
-      switchText="Remember your password?"
-      switchAction="Back to Login"
-    >
-      <div className="space-y-4">
-        <Input
-          label="Email Address"
-          type="email"
-          value={email}
-          onChange={(e: any) => {
-            setEmail(e.target.value);
-            setErrorMsg("");
-          }}
-          icon={Mail}
-          placeholder="you@restaurant.com"
-        />
-        {errorMsg && (
-          <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
-            {errorMsg}
-          </div>
-        )}
-        <Btn
-          size="lg"
-          className="w-full"
-          onClick={handleRequestReset}
-          disabled={isLoading}
-        >
-          {isLoading ? "Verifying..." : "Send Reset Instructions"} <ArrowRight size={16} />
-        </Btn>
-      </div>
-    </AuthLayout>
-  );
-}
-
-// ─── RESET PASSWORD PAGE ───────────────────────────────────────────────────────
-
-function ResetPasswordPage({ navigate }: any) {
-  const [email, setEmail] = useState("");
-  const [form, setForm] = useState({ pass: "", confirm: "" });
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Extract email from sessionStorage on mount
-  useEffect(() => {
-    const storedEmail = window.sessionStorage.getItem("resetPasswordEmail");
-    if (storedEmail) {
-      setEmail(storedEmail);
-    }
-  }, []);
-
-  const handleResetPassword = async () => {
-    if (!email) {
-      setErrorMsg("Email is missing. Start from forgot password.");
-      return;
-    }
-
-    if (!form.pass || !form.confirm) {
-      setErrorMsg("Both password fields are required");
-      return;
-    }
-
-    if (form.pass !== form.confirm) {
-      setErrorMsg("Passwords do not match");
-      return;
-    }
-
-    if (form.pass.length < 8) {
-      setErrorMsg("Password must be at least 8 characters");
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMsg("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/reset-password",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email,
-            newPassword: form.pass,
-            confirmPassword: form.confirm,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setErrorMsg(data?.message || "Password reset failed");
-        setIsLoading(false);
-        return;
-      }
-
-      // Success message and redirect
-      setSuccessMsg("✓ Password changed successfully!");
-      window.sessionStorage.removeItem("resetPasswordEmail");
-      setTimeout(() => {
-        navigate("donor-login");
-      }, 1500);
-    } catch (error) {
-      setErrorMsg("Failed to reset password");
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <AuthLayout
-      title="Create New Password"
-      sub="Enter a strong password to secure your account."
-      imgUrl="photo-1504674900247-0877df9cc836"
-      navigate={navigate}
-      switchLink="forgot-password"
-      switchText="Need to start over?"
-      switchAction="Back to Forgot Password"
-    >
-      <div className="space-y-4">
-        <div className="bg-blue-50 text-blue-700 text-xs p-2 rounded border border-blue-200">
-          ℹ Resetting password for: <span className="font-semibold">{email}</span>
-        </div>
-
-        <Input
-          label="New Password"
-          type="password"
-          placeholder="Min. 8 characters"
-          value={form.pass}
-          onChange={(e: any) => {
-            setForm({ ...form, pass: e.target.value });
-            setErrorMsg("");
-          }}
-          icon={Shield}
-          required
-        />
-        <Input
-          label="Confirm Password"
-          type="password"
-          placeholder="Repeat password"
-          value={form.confirm}
-          onChange={(e: any) => {
-            setForm({ ...form, confirm: e.target.value });
-            setErrorMsg("");
-          }}
-          icon={Shield}
-          required
-        />
-        {errorMsg && (
-          <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
-            {errorMsg}
-          </div>
-        )}
-        {successMsg && (
-          <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded border border-emerald-200">
-            {successMsg}
-          </div>
-        )}
-        <Btn
-          size="lg"
-          className="w-full"
-          onClick={handleResetPassword}
-          disabled={isLoading || !email}
-        >
-          {isLoading ? "Resetting..." : "Reset Password"}
-        </Btn>
-      </div>
-    </AuthLayout>
-  );
-}
-
-
 // ─── APP ROUTER ───────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -2836,32 +2569,10 @@ export default function App() {
 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [view]);
 
-  useEffect(() => {
-    try {
-      const savedUser = window.localStorage.getItem("resqmeal_user");
-      if (savedUser) {
-        setAuthUser(JSON.parse(savedUser));
-      }
-    } catch (error) {
-      console.error("Failed to restore saved user:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authUser) {
-      window.localStorage.setItem("resqmeal_user", JSON.stringify(authUser));
-    } else {
-      window.localStorage.removeItem("resqmeal_user");
-    }
-  }, [authUser]);
-
   const navigate = (v: string) => setView(v);
 
   const handleLogin = (r: string, user?: any) => {
-    const nextUser = user || authUser;
-    if (nextUser?.name) {
-      setAuthUser({ ...nextUser, role: r });
-    }
+    setAuthUser(user || null);
     setRole(r);
     setView(`${r}-dashboard`);
   };
@@ -2869,7 +2580,6 @@ export default function App() {
   const handleLogout = () => {
     setRole("public");
     setView("home");
-    setAuthUser(null);
   };
 
   // Public routes
@@ -2885,35 +2595,32 @@ export default function App() {
   if (view === "ngo-login")      return <NGOLoginPage navigate={navigate} onLogin={(user: any) => handleLogin("ngo", user)} />;
   if (view === "ngo-register")   return <NGORegisterPage navigate={navigate} />;
   if (view === "admin-login")    return <AdminLoginPage navigate={navigate} onLogin={() => handleLogin("admin")} />;
-  if (view === "forgot-password") return <ForgotPasswordPage navigate={navigate} />;
-  if (view === "reset-password") return <ResetPasswordPage navigate={navigate} />;
 
   // Dashboard routes — all wrapped in DashboardLayout
   const currentRole = role === "public" ? "donor" : role;
-  const currentUserName = authUser?.name || "Admin";
 
   return (
-    <DashboardLayout role={currentRole} view={view} navigate={navigate} onLogout={handleLogout} userName={currentUserName}>
+    <DashboardLayout role={currentRole} view={view} navigate={navigate} onLogout={handleLogout}>
       {/* DONOR */}
-      {view === "donor-dashboard"        && <DonorDashboard navigate={navigate} userName={currentUserName} />}
+      {view === "donor-dashboard"        && <DonorDashboard navigate={navigate} />}
       {view === "donor-add-food"         && <DonorAddFood navigate={navigate} />}
-      {view === "donor-my-donations"     && <DonorMyDonations navigate={navigate} />}
+      {view === "donor-my-donations"     && <DonorMyDonations navigate={navigate} authUser={authUser} />}
       {view === "donor-donation-details" && <DonorDonationDetails navigate={navigate} />}
       {view === "donor-ngo-requests"     && <DonorNGORequests navigate={navigate} />}
       {view === "donor-pickup-tracking"  && <DonorPickupTracking navigate={navigate} />}
       {view === "donor-notifications"    && <NotificationsPage navigate={navigate} role="donor" />}
       {view === "donor-impact"           && <ImpactDashboard role="donor" />}
-      {view === "donor-profile"          && <ProfilePage role="donor" userName={currentUserName} />}
+      {view === "donor-profile"          && <ProfilePage role="donor" />}
 
       {/* NGO */}
-      {view === "ngo-dashboard"         && <NGODashboard navigate={navigate} userName={currentUserName} />}
+      {view === "ngo-dashboard"         && <NGODashboard navigate={navigate} />}
       {view === "ngo-browse-food"       && <NGOBrowseFood navigate={navigate} />}
       {view === "ngo-food-details"      && <NGOFoodDetails navigate={navigate} />}
       {view === "ngo-my-requests"       && <NGOMyRequests navigate={navigate} />}
       {view === "ngo-pickup-tracking"   && <DonorPickupTracking navigate={navigate} />}
       {view === "ngo-notifications"     && <NotificationsPage navigate={navigate} role="ngo" />}
       {view === "ngo-impact"            && <ImpactDashboard role="ngo" />}
-      {view === "ngo-profile"           && <ProfilePage role="ngo" userName={currentUserName} />}
+      {view === "ngo-profile"           && <ProfilePage role="ngo" />}
 
       {/* ADMIN */}
       {view === "admin-dashboard"          && <AdminDashboard navigate={navigate} />}
