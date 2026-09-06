@@ -1,9 +1,17 @@
 import express from "express";
 import cors from "cors";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 import { pool } from "./db";
 import authRoutes from "./routes/auth";
-import foodRoutes from "./routes/food";
+import foodRoutes from "./routes/Food";
+
+async function initializeDatabase() {
+  const schemaPath = path.join(process.cwd(), "server", "schema.sql");
+  const schema = await fs.readFile(schemaPath, "utf8");
+  await pool.query(schema);
+}
 
 const app = express();
 
@@ -89,10 +97,22 @@ app.use(
 // START SERVER
 // =====================================================
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT || 5000);
+const databaseReady = initializeDatabase();
 
-app.listen(PORT, () => {
-  console.log(
-    `ResQMeal backend running on http://localhost:${PORT}`
-  );
-});
+if (process.env.START_SERVER !== "false") {
+  databaseReady
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(
+          `ResQMeal backend running on http://localhost:${PORT}`
+        );
+      });
+    })
+    .catch((error) => {
+      console.error("Database initialization failed:", error);
+      process.exitCode = 1;
+    });
+}
+
+export { app, databaseReady };
