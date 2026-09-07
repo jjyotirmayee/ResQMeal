@@ -483,11 +483,11 @@ function DashboardLayout({ children, role, view, navigate, onLogout, authUser }:
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(`${role}-notifications`)} className="relative p-2 rounded-xl hover:bg-muted transition-colors">
+            <button onClick={() => navigate(role === "admin" ? "admin-dashboard" : `${role}-notifications`)} className="relative p-2 rounded-xl hover:bg-muted transition-colors">
               <Bell size={18} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button onClick={() => navigate(`${role}-profile`)} className={`w-8 h-8 ${meta.color} rounded-xl flex items-center justify-center text-white text-xs font-bold`}>
+            <button onClick={() => navigate(role === "admin" ? "admin-settings" : `${role}-profile`)} className={`w-8 h-8 ${meta.color} rounded-xl flex items-center justify-center text-white text-xs font-bold`}>
               {meta.name[0]}
             </button>
           </div>
@@ -987,6 +987,13 @@ function AuthLayout({ title, sub, imgUrl, children, navigate, switchLink, switch
               <button onClick={() => navigate(switchLink)} className="text-emerald-600 font-semibold hover:underline">{switchAction}</button>
             </p>
           )}
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-6 pt-4 border-t border-border">
+            {[['Home', 'home'], ['About', 'about'], ['How It Works', 'how-it-works'], ['Impact', 'impact'], ['Contact', 'contact']].map(([label, destination]) => (
+              <button key={destination} onClick={() => navigate(destination)} className="text-xs font-medium text-muted-foreground hover:text-emerald-600 transition-colors">
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -2555,7 +2562,22 @@ export default function App() {
 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [view]);
 
-  const navigate = (v: string) => setView(v);
+  const navigate = (v: string) => {
+    const publicViews = new Set(["home", "about", "how-it-works", "impact", "contact"]);
+    const authViews = new Set(["donor-login", "donor-register", "ngo-login", "ngo-register", "admin-login"]);
+    const roleViews: Record<string, Set<string>> = {
+      donor: new Set(["donor-dashboard", "donor-add-food", "donor-my-donations", "donor-donation-details", "donor-ngo-requests", "donor-pickup-tracking", "donor-notifications", "donor-impact", "donor-profile"]),
+      ngo: new Set(["ngo-dashboard", "ngo-browse-food", "ngo-food-details", "ngo-my-requests", "ngo-pickup-tracking", "ngo-notifications", "ngo-impact", "ngo-profile"]),
+      admin: new Set(["admin-dashboard", "admin-users", "admin-donors", "admin-ngos", "admin-ngo-verification", "admin-food-management", "admin-request-management", "admin-pickup-monitoring", "admin-reports", "admin-settings"]),
+    };
+
+    if (publicViews.has(v) || authViews.has(v) || roleViews[role]?.has(v)) {
+      setView(v);
+      return;
+    }
+
+    setView(roleViews[role] ? `${role}-dashboard` : "home");
+  };
 
   const handleLogin = (r: string, data?: any, token?: string) => {
     const user = data?.user || data;
