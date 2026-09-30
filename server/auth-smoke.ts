@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 process.env.USE_IN_MEMORY_DB = "true";
 process.env.START_SERVER = "false";
 
 const { app, databaseReady } = await import("./index");
+const { pool } = await import("./db");
 const { default: request } = await import("supertest");
 
 await databaseReady;
@@ -46,6 +48,72 @@ const currentUser = await request(app)
 assert.equal(currentUser.status, 200);
 assert.equal(currentUser.body.user.email, "smoke@example.com");
 
+delete process.env.SMTP_HOST;
+delete process.env.SMTP_PORT;
+delete process.env.SMTP_SECURE;
+delete process.env.SMTP_USER;
+delete process.env.SMTP_PASS;
+delete process.env.SMTP_FROM;
+
+const unconfiguredRecovery = await request(app)
+  .post("/api/auth/forgot-password")
+  .send({ email: "smoke@example.com" });
+
+assert.equal(unconfiguredRecovery.status, 503);
+assert.match(unconfiguredRecovery.body.message, /not configured/i);
+
+const emailOnlyReset = await request(app)
+  .post("/api/auth/reset-password")
+  .send({
+    email: "smoke@example.com",
+    newPassword: "attacker-password",
+    confirmPassword: "attacker-password",
+  });
+
+assert.equal(emailOnlyReset.status, 400);
+
+const resetToken = "smoke-single-use-reset-token";
+const resetTokenHash = createHash("sha256")
+  .update(resetToken)
+  .digest("hex");
+
+await pool.query(
+  `INSERT INTO password_reset_tokens
+    (user_id, token_hash, expires_at)
+   VALUES ($1, $2, $3)`,
+  [registration.body.user.id, resetTokenHash, new Date(Date.now() + 30 * 60 * 1000)]
+);
+
+const passwordReset = await request(app)
+  .post("/api/auth/reset-password")
+  .send({
+    token: resetToken,
+    newPassword: "updated-smoke-password",
+    confirmPassword: "updated-smoke-password",
+  });
+
+assert.equal(passwordReset.status, 200);
+
+const reusedTokenReset = await request(app)
+  .post("/api/auth/reset-password")
+  .send({
+    token: resetToken,
+    newPassword: "another-password",
+    confirmPassword: "another-password",
+  });
+
+assert.equal(reusedTokenReset.status, 400);
+
+const updatedPasswordLogin = await request(app)
+  .post("/api/auth/login")
+  .send({
+    email: "smoke@example.com",
+    password: "updated-smoke-password",
+    role: "DONOR",
+  });
+
+assert.equal(updatedPasswordLogin.status, 200);
+
 const ngoRegistration = await request(app)
   .post("/api/auth/register")
   .send({
@@ -77,4 +145,4 @@ assert.equal(ngoLogin.status, 200);
 assert.equal(ngoLogin.body.user.role, "NGO");
 assert.equal(ngoLogin.body.verification.isVerified, false);
 
-console.log("Auth smoke test passed: donor and NGO register -> login -> /me");
+console.log("Auth smoke test passed: donor and NGO login plus secure single-use password reset");

@@ -1,7 +1,12 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { createHash, randomBytes } from "node:crypto";
 import { pool } from "../db";
+import {
+  isPasswordResetEmailConfigured,
+  sendPasswordResetEmail,
+} from "../email";
 
 const router = Router();
 
@@ -677,6 +682,13 @@ router.post(
         });
       }
 
+      if (!isPasswordResetEmailConfigured()) {
+        return res.status(503).json({
+          message:
+            "Password reset email is not configured on this server. Please contact the administrator.",
+        });
+      }
+
       const normalizedEmail = String(email)
         .trim()
         .toLowerCase();
@@ -689,33 +701,56 @@ router.post(
         `SELECT
           id,
           email,
-          name,
           role
          FROM users
          WHERE LOWER(email) = $1`,
         [normalizedEmail]
       );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          message: "Email not found",
-        });
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        const token = randomBytes(32).toString("hex");
+        const tokenHash = createHash("sha256")
+          .update(token)
+          .digest("hex");
+
+        await pool.query(
+          `DELETE FROM password_reset_tokens
+           WHERE user_id = $1`,
+          [user.id]
+        );
+
+        await pool.query(
+          `INSERT INTO password_reset_tokens
+            (user_id, token_hash, expires_at)
+           VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+          [user.id, tokenHash]
+        );
+
+        const appUrl = (process.env.APP_URL || "http://localhost:5173")
+          .replace(/\/$/, "");
+        const role = String(user.role).toLowerCase();
+        const resetUrl = `${appUrl}/password-reset?token=${token}&role=${encodeURIComponent(role)}`;
+
+        try {
+          await sendPasswordResetEmail(user.email, resetUrl);
+        } catch (emailError) {
+          await pool.query(
+            `DELETE FROM password_reset_tokens
+             WHERE user_id = $1 AND token_hash = $2`,
+            [user.id, tokenHash]
+          );
+          console.error("Password reset email delivery failed:", emailError);
+          return res.status(503).json({
+            message:
+              "We could not send a password reset email right now. Please try again later.",
+          });
+        }
       }
 
-      const user = result.rows[0];
-
-      // ----------------------------------------
-      // Response
-      // ----------------------------------------
-
       return res.status(200).json({
-        message: "Email verified. Proceed to reset password.",
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        },
+        message:
+          "If an account exists for that email, a password reset link has been sent.",
       });
     } catch (error) {
       console.error(
@@ -724,8 +759,7 @@ router.post(
       );
 
       return res.status(500).json({
-        message:
-          "Failed to process password reset request",
+        message: "Unable to send a password reset email right now",
       });
     }
   }
@@ -741,7 +775,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const {
-        email,
+        token,
         newPassword,
         confirmPassword,
       } = req.body;
@@ -750,10 +784,10 @@ router.post(
       // Validation
       // ----------------------------------------
 
-      if (!email || !newPassword || !confirmPassword) {
+      if (!token || !newPassword || !confirmPassword) {
         return res.status(400).json({
           message:
-            "Email, password, and password confirmation are required",
+            "Reset token, password, and password confirmation are required",
         });
       }
 
@@ -770,61 +804,49 @@ router.post(
         });
       }
 
-      const normalizedEmail = String(email)
-        .trim()
-        .toLowerCase();
-
-      // ----------------------------------------
-      // Find user by email
-      // ----------------------------------------
-
-      const result = await pool.query(
-        `SELECT
-          id,
-          email,
-          role
-         FROM users
-         WHERE LOWER(email) = $1`,
-        [normalizedEmail]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          message: "Email not found",
-        });
-      }
-
-      const user = result.rows[0];
-
-      // ----------------------------------------
-      // Hash new password
-      // ----------------------------------------
-
+      const tokenHash = createHash("sha256")
+        .update(String(token))
+        .digest("hex");
       const passwordHash =
         await bcrypt.hash(newPassword, 10);
+      const client = await pool.connect();
 
-      // ----------------------------------------
-      // Update password in database
-      // ----------------------------------------
+      try {
+        await client.query("BEGIN");
+        const tokenResult = await client.query(
+          `SELECT user_id
+           FROM password_reset_tokens
+           WHERE token_hash = $1 AND expires_at > NOW()
+           FOR UPDATE`,
+          [tokenHash]
+        );
 
-      await pool.query(
-        `UPDATE users
-         SET password_hash = $1
-         WHERE id = $2`,
-        [passwordHash, user.id]
-      );
+        if (tokenResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            message: "This password reset link is invalid or expired",
+          });
+        }
 
-      // ----------------------------------------
-      // Response
-      // ----------------------------------------
+        const userId = tokenResult.rows[0].user_id;
+        await client.query(
+          `UPDATE users SET password_hash = $1 WHERE id = $2`,
+          [passwordHash, userId]
+        );
+        await client.query(
+          `DELETE FROM password_reset_tokens WHERE user_id = $1`,
+          [userId]
+        );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
 
       return res.status(200).json({
         message: "Password reset successful",
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-        },
       });
     } catch (error) {
       console.error(

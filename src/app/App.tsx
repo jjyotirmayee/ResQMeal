@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   Leaf, Heart, Users, Package, ArrowRight, Star, MapPin, Bell, Settings,
   LogOut, Menu, X, Search, Plus, Eye, ChevronRight, BarChart2,
@@ -362,44 +363,86 @@ function Footer({ navigate }: any) {
 
 // ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────────
 
-function DashboardLayout({ children, role, view, navigate, onLogout, authUser }: any) {
+const PAGE_PATHS: Record<string, string> = {
+  home: "/",
+  about: "/about",
+  "how-it-works": "/how-it-works",
+  impact: "/impact",
+  contact: "/contact",
+  "donor-login": "/donor/login",
+  "donor-register": "/donor/register",
+  "ngo-login": "/ngo/login",
+  "ngo-register": "/ngo/register",
+  "admin-login": "/admin/login",
+  "password-recovery-donor": "/password-recovery?role=donor",
+  "password-recovery-ngo": "/password-recovery?role=ngo",
+  "password-recovery-admin": "/password-recovery?role=admin",
+  "donor-dashboard": "/donor/dashboard",
+  "donor-add-food": "/donor/add-food",
+  "donor-my-donations": "/donor/my-donations",
+  "donor-donation-details": "/donor/donations/f1",
+  "donor-ngo-requests": "/donor/requests",
+  "donor-pickup-tracking": "/donor/pickup-tracking",
+  "donor-notifications": "/donor/notifications",
+  "donor-impact": "/donor/impact",
+  "donor-profile": "/donor/profile",
+  "ngo-dashboard": "/ngo/dashboard",
+  "ngo-browse-food": "/ngo/browse-food",
+  "ngo-food-details": "/ngo/food/f1",
+  "ngo-my-requests": "/ngo/requests",
+  "ngo-pickup-tracking": "/ngo/pickup-tracking",
+  "ngo-notifications": "/ngo/notifications",
+  "ngo-impact": "/ngo/impact",
+  "ngo-profile": "/ngo/profile",
+  "admin-dashboard": "/admin/dashboard",
+  "admin-users": "/admin/users",
+  "admin-donors": "/admin/donors",
+  "admin-ngos": "/admin/ngos",
+  "admin-ngo-verification": "/admin/ngo-verification",
+  "admin-food-management": "/admin/food-management",
+  "admin-request-management": "/admin/request-management",
+  "admin-pickup-monitoring": "/admin/pickup-monitoring",
+  "admin-reports": "/admin/reports",
+  "admin-settings": "/admin/settings",
+};
+
+const DONOR_NAV = [
+  { id: "donor-dashboard", label: "Dashboard", icon: Home },
+  { id: "donor-add-food", label: "Add Food", icon: Plus },
+  { id: "donor-my-donations", label: "My Donations", icon: Package },
+  { id: "donor-ngo-requests", label: "NGO Requests", icon: Inbox },
+  { id: "donor-pickup-tracking", label: "Pickup Tracking", icon: Truck },
+  { id: "donor-notifications", label: "Notifications", icon: Bell },
+  { id: "donor-impact", label: "My Impact", icon: Award },
+  { id: "donor-profile", label: "Profile", icon: User },
+];
+
+const NGO_NAV = [
+  { id: "ngo-dashboard", label: "Dashboard", icon: Home },
+  { id: "ngo-browse-food", label: "Browse Food", icon: Search },
+  { id: "ngo-my-requests", label: "My Requests", icon: Package },
+  { id: "ngo-pickup-tracking", label: "Pickup Tracking", icon: Truck },
+  { id: "ngo-notifications", label: "Notifications", icon: Bell },
+  { id: "ngo-impact", label: "Our Impact", icon: Award },
+  { id: "ngo-profile", label: "Profile", icon: Building },
+];
+
+const ADMIN_NAV = [
+  { id: "admin-dashboard", label: "Dashboard", icon: Home },
+  { id: "admin-users", label: "All Users", icon: Users },
+  { id: "admin-donors", label: "Donors", icon: Heart },
+  { id: "admin-ngos", label: "NGOs", icon: Building },
+  { id: "admin-ngo-verification", label: "NGO Verification", icon: Shield },
+  { id: "admin-food-management", label: "Food Management", icon: Package },
+  { id: "admin-request-management", label: "Requests", icon: Inbox },
+  { id: "admin-pickup-monitoring", label: "Pickup Monitoring", icon: Truck },
+  { id: "admin-reports", label: "Reports & Analytics", icon: BarChart2 },
+  { id: "admin-settings", label: "Settings", icon: Settings },
+];
+
+function DashboardLayout({ role, navigate, onLogout, authUser }: any) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const donorNav = [
-    { id: "donor-dashboard", label: "Dashboard", icon: Home },
-    { id: "donor-add-food", label: "Add Food", icon: Plus },
-    { id: "donor-my-donations", label: "My Donations", icon: Package },
-    { id: "donor-ngo-requests", label: "NGO Requests", icon: Inbox },
-    { id: "donor-pickup-tracking", label: "Pickup Tracking", icon: Truck },
-    { id: "donor-notifications", label: "Notifications", icon: Bell },
-    { id: "donor-impact", label: "My Impact", icon: Award },
-    { id: "donor-profile", label: "Profile", icon: User },
-  ];
-
-  const ngoNav = [
-    { id: "ngo-dashboard", label: "Dashboard", icon: Home },
-    { id: "ngo-browse-food", label: "Browse Food", icon: Search },
-    { id: "ngo-my-requests", label: "My Requests", icon: Package },
-    { id: "ngo-pickup-tracking", label: "Pickup Tracking", icon: Truck },
-    { id: "ngo-notifications", label: "Notifications", icon: Bell },
-    { id: "ngo-impact", label: "Our Impact", icon: Award },
-    { id: "ngo-profile", label: "Profile", icon: Building },
-  ];
-
-  const adminNav = [
-    { id: "admin-dashboard", label: "Dashboard", icon: Home },
-    { id: "admin-users", label: "All Users", icon: Users },
-    { id: "admin-donors", label: "Donors", icon: Heart },
-    { id: "admin-ngos", label: "NGOs", icon: Building },
-    { id: "admin-ngo-verification", label: "NGO Verification", icon: Shield },
-    { id: "admin-food-management", label: "Food Management", icon: Package },
-    { id: "admin-request-management", label: "Requests", icon: Inbox },
-    { id: "admin-pickup-monitoring", label: "Pickup Monitoring", icon: Truck },
-    { id: "admin-reports", label: "Reports & Analytics", icon: BarChart2 },
-    { id: "admin-settings", label: "Settings", icon: Settings },
-  ];
-
-  const navItems = role === "donor" ? donorNav : role === "ngo" ? ngoNav : adminNav;
+  const navItems = role === "donor" ? DONOR_NAV : role === "ngo" ? NGO_NAV : ADMIN_NAV;
   const roleMeta: any = {
     donor: { label: "Donor Account", color: "bg-emerald-600", name: authUser?.name || "Donor Account" },
     ngo: { label: "NGO Account", color: "bg-blue-600", name: authUser?.name || "NGO Account" },
@@ -428,18 +471,15 @@ function DashboardLayout({ children, role, view, navigate, onLogout, authUser }:
       </div>
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {navItems.map(({ id, label, icon: Icon }) => (
-          <button
+          <NavLink
             key={id}
-            onClick={() => { navigate(id); setSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              view === id
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-foreground hover:bg-muted"
-            }`}
+            to={PAGE_PATHS[id]}
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) => `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? "bg-emerald-600 text-white shadow-sm" : "text-foreground hover:bg-muted"}`}
           >
             <Icon size={16} />
             {label}
-          </button>
+          </NavLink>
         ))}
       </nav>
       <div className="p-3 border-t border-border">
@@ -493,7 +533,7 @@ function DashboardLayout({ children, role, view, navigate, onLogout, authUser }:
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>
@@ -514,6 +554,26 @@ function PageHeader({ title, sub, actions }: any) {
 
 // ─── PUBLIC PAGES ─────────────────────────────────────────────────────────────
 
+function PublicLayout({ navigate }: any) {
+  const location = useLocation();
+  const publicView = Object.entries(PAGE_PATHS).find(([, path]) => path === location.pathname)?.[0] || "home";
+  return (
+    <div className="min-h-screen bg-background">
+      <PublicNav view={publicView} navigate={navigate} />
+      <Outlet />
+      <Footer navigate={navigate} />
+    </div>
+  );
+}
+
+function ProtectedLayout({ requiredRole, role, authUser, onLogout, navigate }: any) {
+  const location = useLocation();
+  if (!authUser || role !== requiredRole) {
+    return <Navigate to={PAGE_PATHS[`${requiredRole}-login`]} replace state={{ from: location.pathname }} />;
+  }
+  return <DashboardLayout role={requiredRole} navigate={navigate} onLogout={onLogout} authUser={authUser} />;
+}
+
 function HomePage({ navigate }: any) {
   const stats = [
     { n: "12,400+", l: "Meals Rescued" }, { n: "350+", l: "Active Donors" },
@@ -532,7 +592,6 @@ function HomePage({ navigate }: any) {
   ];
   return (
     <div className="min-h-screen bg-background">
-      <PublicNav view="home" navigate={navigate} />
       {/* Hero */}
       <section className="relative min-h-screen flex items-center">
         <div className="absolute inset-0 bg-emerald-950 overflow-hidden">
@@ -663,7 +722,6 @@ function HomePage({ navigate }: any) {
           </div>
         </div>
       </section>
-      <Footer navigate={navigate} />
     </div>
   );
 }
@@ -677,7 +735,6 @@ function AboutPage({ navigate }: any) {
   ];
   return (
     <div className="min-h-screen bg-background">
-      <PublicNav view="about" navigate={navigate} />
       <div className="pt-16">
         <div className="bg-emerald-900 py-24 px-4">
           <div className="max-w-4xl mx-auto text-center">
@@ -732,7 +789,6 @@ function AboutPage({ navigate }: any) {
           </div>
         </section>
       </div>
-      <Footer navigate={navigate} />
     </div>
   );
 }
@@ -756,7 +812,6 @@ function HowItWorksPage({ navigate }: any) {
   ];
   return (
     <div className="min-h-screen bg-background">
-      <PublicNav view="how-it-works" navigate={navigate} />
       <div className="pt-16">
         <div className="bg-gradient-to-br from-emerald-900 to-emerald-700 py-24 px-4">
           <div className="max-w-3xl mx-auto text-center">
@@ -796,7 +851,6 @@ function HowItWorksPage({ navigate }: any) {
           </div>
         </div>
       </div>
-      <Footer navigate={navigate} />
     </div>
   );
 }
@@ -804,7 +858,6 @@ function HowItWorksPage({ navigate }: any) {
 function ImpactPage({ navigate }: any) {
   return (
     <div className="min-h-screen bg-background">
-      <PublicNav view="impact" navigate={navigate} />
       <div className="pt-16">
         <div className="bg-emerald-900 py-24 px-4 text-center">
           <h1 className="text-5xl font-extrabold text-white mb-4" style={{ fontFamily: "var(--font-display)" }}>Our Collective Impact</h1>
@@ -873,7 +926,6 @@ function ImpactPage({ navigate }: any) {
           </div>
         </div>
       </div>
-      <Footer navigate={navigate} />
     </div>
   );
 }
@@ -883,7 +935,6 @@ function ContactPage({ navigate }: any) {
   const [sent, setSent] = useState(false);
   return (
     <div className="min-h-screen bg-background">
-      <PublicNav view="contact" navigate={navigate} />
       <div className="pt-16">
         <div className="bg-emerald-900 py-24 px-4 text-center">
           <h1 className="text-5xl font-extrabold text-white mb-4" style={{ fontFamily: "var(--font-display)" }}>Get In Touch</h1>
@@ -941,7 +992,6 @@ function ContactPage({ navigate }: any) {
           </div>
         </div>
       </div>
-      <Footer navigate={navigate} />
     </div>
   );
 }
@@ -1000,6 +1050,114 @@ function AuthLayout({ title, sub, imgUrl, children, navigate, switchLink, switch
   );
 }
 
+function PasswordRecoveryPage({ navigate }: any) {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const token = query.get("token") || "";
+  const requestedRole = query.get("role")?.toLowerCase();
+  const loginDestination = requestedRole === "ngo"
+    ? "ngo-login"
+    : requestedRole === "admin"
+      ? "admin-login"
+      : "donor-login";
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [resetComplete, setResetComplete] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const isResetRoute = location.pathname === "/password-reset";
+
+  const submit = async (event: any) => {
+    event.preventDefault();
+    setError("");
+
+    if (token && password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (token && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (token) {
+        await authRequest("reset-password", {
+          token,
+          newPassword: password,
+          confirmPassword,
+        });
+        setResetComplete(true);
+      } else {
+        await authRequest("forgot-password", { email });
+        setEmailSubmitted(true);
+      }
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Password recovery failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthLayout
+      title={resetComplete ? "" : token ? "Choose a New Password" : "Reset Your Password"}
+      sub={resetComplete ? "" : token ? "Set a new password for your ResQMeal account." : "We will email you a secure link to reset your password."}
+      imgUrl="photo-1504674900247-0877df9cc836"
+      navigate={navigate}
+    >
+      {resetComplete ? (
+        <div className="space-y-5 text-center">
+          <CheckCircle2 className="mx-auto text-emerald-600" size={42} aria-hidden="true" />
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-foreground">Password Reset Successful!</h2>
+            <p className="text-sm text-muted-foreground" role="status">Your ResQMeal password has been changed successfully.</p>
+          </div>
+          <Btn className="w-full" onClick={() => navigate(loginDestination)}>Return to Sign In</Btn>
+        </div>
+      ) : emailSubmitted ? (
+        <div className="space-y-5">
+          <p className="text-sm text-emerald-700" role="status">
+            If an account exists for this email, a password reset link has been sent.
+          </p>
+          <Btn className="w-full" onClick={() => navigate(loginDestination)}>Return to Sign In</Btn>
+        </div>
+      ) : isResetRoute && !token ? (
+        <div className="space-y-5">
+          <p className="text-sm text-red-600" role="alert">This password reset link is invalid or incomplete. Request a new link to continue.</p>
+          <Btn className="w-full" variant="outline" onClick={() => navigate(`password-recovery-${requestedRole === "ngo" ? "ngo" : "donor"}`)}>Request a New Link</Btn>
+        </div>
+      ) : (
+        <form className="space-y-4" onSubmit={submit}>
+          {token ? (
+            <>
+              <Input label="New Password" type="password" value={password} onChange={(event: any) => setPassword(event.target.value)} icon={Shield} placeholder="At least 8 characters" required />
+              <Input label="Confirm New Password" type="password" value={confirmPassword} onChange={(event: any) => setConfirmPassword(event.target.value)} icon={Shield} placeholder="Enter it again" required />
+            </>
+          ) : (
+            <Input label="Account Email" type="email" value={email} onChange={(event: any) => setEmail(event.target.value)} icon={Mail} placeholder="you@example.com" required />
+          )}
+          {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+          <Btn type="submit" size="lg" className="w-full" disabled={loading}>
+            {loading ? "Please wait..." : token ? "Reset Password" : "Send Reset Link"}
+            <ArrowRight size={16} />
+          </Btn>
+        </form>
+      )}
+      {!resetComplete && !emailSubmitted && !(isResetRoute && !token) && (
+        <button type="button" onClick={() => navigate(loginDestination)} className="mt-5 w-full text-sm font-medium text-emerald-600 hover:underline">
+          Back to Sign In
+        </button>
+      )}
+    </AuthLayout>
+  );
+}
+
 function DonorLoginPage({ navigate, onLogin }: any) {
   const [form, setForm] = useState({ email: "", pass: "" });
   const [error, setError] = useState("");
@@ -1026,7 +1184,7 @@ function DonorLoginPage({ navigate, onLogin }: any) {
         <Input label="Password" type="password" value={form.pass} onChange={(e: any) => setForm({ ...form, pass: e.target.value })} icon={Shield} placeholder="Your password" />
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" /> Remember me</label>
-          <button className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
+          <button type="button" onClick={() => navigate("password-recovery-donor")} className="text-emerald-600 font-medium hover:underline">Forgot password?</button>
         </div>
         {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
         <Btn type="submit" size="lg" className="w-full" disabled={loading}>{loading ? "Signing In..." : "Sign In"} <ArrowRight size={16} /></Btn>
@@ -1096,7 +1254,7 @@ function NGOLoginPage({ navigate, onLogin }: any) {
       <form className="space-y-4" onSubmit={submit}>
         <Input label="Email Address" type="email" value={form.email} onChange={(event: any) => setForm({ ...form, email: event.target.value })} icon={Mail} placeholder="contact@ngo.org" />
         <Input label="Password" type="password" value={form.pass} onChange={(event: any) => setForm({ ...form, pass: event.target.value })} icon={Shield} placeholder="Your password" />
-        <div className="flex items-center justify-between text-sm"><label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" /> Remember me</label><button type="button" className="text-emerald-600 font-medium hover:underline">Forgot password?</button></div>
+        <div className="flex items-center justify-between text-sm"><label className="flex items-center gap-2 text-muted-foreground cursor-pointer"><input type="checkbox" className="rounded" /> Remember me</label><button type="button" onClick={() => navigate("password-recovery-ngo")} className="text-emerald-600 font-medium hover:underline">Forgot password?</button></div>
         {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
         <Btn type="submit" size="lg" className="w-full" disabled={loading}>{loading ? "Signing In..." : "Sign In"} <ArrowRight size={16} /></Btn>
       </form>
@@ -1143,6 +1301,25 @@ function NGORegisterPage({ navigate, onRegistered }: any) {
 }
 
 function AdminLoginPage({ navigate, onLogin }: any) {
+  const [email, setEmail] = useState("admin@resqmeal.in");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: any) => {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const data = await authRequest("login", { email, password, role: "ADMIN" });
+      onLogin(data);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Admin login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-emerald-950 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
@@ -1154,19 +1331,23 @@ function AdminLoginPage({ navigate, onLogin }: any) {
           <p className="text-emerald-300 text-sm">ResQMeal Platform Administration</p>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
-          <div className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-semibold text-emerald-200 mb-1.5">Admin Email</label>
-              <input type="email" defaultValue="admin@resqmeal.in" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-emerald-200 mb-1.5">Password</label>
-              <input type="password" defaultValue="••••••••••" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
             </div>
-            <button onClick={onLogin} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
-              Access Admin Panel <ArrowRight size={16} />
+            <div className="text-right">
+              <button type="button" onClick={() => navigate("password-recovery-admin")} className="text-sm text-emerald-300 hover:text-white hover:underline">Forgot password?</button>
+            </div>
+            {error && <p className="text-sm text-red-300" role="alert">{error}</p>}
+            <button type="submit" disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading ? "Signing In..." : "Access Admin Panel"} <ArrowRight size={16} />
             </button>
-          </div>
+          </form>
         </div>
         <div className="text-center mt-6">
           <button onClick={() => navigate("home")} className="text-emerald-400 text-sm hover:text-emerald-300 transition-colors">← Back to Home</button>
@@ -2555,28 +2736,16 @@ function AdminSettings({ navigate }: any) {
 
 // ─── APP ROUTER ───────────────────────────────────────────────────────────────
 
-export default function App() {
-  const [view, setView] = useState("home");
+function AppRoutes() {
   const [role, setRole] = useState("public");
   const [authUser, setAuthUser] = useState<any>(null);
+  const routerNavigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => { window.scrollTo({ top: 0 }); }, [view]);
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [location.pathname]);
 
   const navigate = (v: string) => {
-    const publicViews = new Set(["home", "about", "how-it-works", "impact", "contact"]);
-    const authViews = new Set(["donor-login", "donor-register", "ngo-login", "ngo-register", "admin-login"]);
-    const roleViews: Record<string, Set<string>> = {
-      donor: new Set(["donor-dashboard", "donor-add-food", "donor-my-donations", "donor-donation-details", "donor-ngo-requests", "donor-pickup-tracking", "donor-notifications", "donor-impact", "donor-profile"]),
-      ngo: new Set(["ngo-dashboard", "ngo-browse-food", "ngo-food-details", "ngo-my-requests", "ngo-pickup-tracking", "ngo-notifications", "ngo-impact", "ngo-profile"]),
-      admin: new Set(["admin-dashboard", "admin-users", "admin-donors", "admin-ngos", "admin-ngo-verification", "admin-food-management", "admin-request-management", "admin-pickup-monitoring", "admin-reports", "admin-settings"]),
-    };
-
-    if (publicViews.has(v) || authViews.has(v) || roleViews[role]?.has(v)) {
-      setView(v);
-      return;
-    }
-
-    setView(roleViews[role] ? `${role}-dashboard` : "home");
+    routerNavigate(PAGE_PATHS[v] || (role === "public" ? PAGE_PATHS.home : PAGE_PATHS[`${role}-dashboard`]));
   };
 
   const handleLogin = (r: string, data?: any, token?: string) => {
@@ -2584,67 +2753,79 @@ export default function App() {
     setAuthUser(user || null);
     if (token) localStorage.setItem("resqmeal_token", token);
     setRole(r);
-    setView(`${r}-dashboard`);
+    routerNavigate(PAGE_PATHS[`${r}-dashboard`]);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("resqmeal_token");
     setAuthUser(null);
     setRole("public");
-    setView("home");
+    routerNavigate(PAGE_PATHS.home);
   };
 
-  // Public routes
-  if (view === "home")         return <HomePage navigate={navigate} />;
-  if (view === "about")        return <AboutPage navigate={navigate} />;
-  if (view === "how-it-works") return <HowItWorksPage navigate={navigate} />;
-  if (view === "impact")       return <ImpactPage navigate={navigate} />;
-  if (view === "contact")      return <ContactPage navigate={navigate} />;
-
-  // Auth routes
-  if (view === "donor-login")    return <DonorLoginPage navigate={navigate} onLogin={(data: any) => handleLogin("donor", data.user, data.token)} />;
-  if (view === "donor-register") return <DonorRegisterPage navigate={navigate} onRegistered={(data: any) => handleLogin("donor", data.user, data.token)} />;
-  if (view === "ngo-login")      return <NGOLoginPage navigate={navigate} onLogin={(data: any) => handleLogin("ngo", data.user, data.token)} />;
-  if (view === "ngo-register")   return <NGORegisterPage navigate={navigate} onRegistered={(data: any) => handleLogin("ngo", data.user, data.token)} />;
-  if (view === "admin-login")    return <AdminLoginPage navigate={navigate} onLogin={() => handleLogin("admin")} />;
-
-  // Dashboard routes — all wrapped in DashboardLayout
-  const currentRole = role === "public" ? "donor" : role;
-
   return (
-    <DashboardLayout role={currentRole} view={view} navigate={navigate} onLogout={handleLogout} authUser={authUser}>
-      {/* DONOR */}
-      {view === "donor-dashboard"        && <DonorDashboard navigate={navigate} />}
-      {view === "donor-add-food"         && <DonorAddFood navigate={navigate} />}
-      {view === "donor-my-donations"     && <DonorMyDonations navigate={navigate} authUser={authUser} />}
-      {view === "donor-donation-details" && <DonorDonationDetails navigate={navigate} />}
-      {view === "donor-ngo-requests"     && <DonorNGORequests navigate={navigate} />}
-      {view === "donor-pickup-tracking"  && <DonorPickupTracking navigate={navigate} />}
-      {view === "donor-notifications"    && <NotificationsPage navigate={navigate} role="donor" />}
-      {view === "donor-impact"           && <ImpactDashboard role="donor" />}
-      {view === "donor-profile"          && <ProfilePage role="donor" />}
+    <Routes>
+      <Route element={<PublicLayout navigate={navigate} />}>
+        <Route path="/" element={<HomePage navigate={navigate} />} />
+        <Route path="/about" element={<AboutPage navigate={navigate} />} />
+        <Route path="/how-it-works" element={<HowItWorksPage navigate={navigate} />} />
+        <Route path="/impact" element={<ImpactPage navigate={navigate} />} />
+        <Route path="/contact" element={<ContactPage navigate={navigate} />} />
+      </Route>
 
-      {/* NGO */}
-      {view === "ngo-dashboard"         && <NGODashboard navigate={navigate} />}
-      {view === "ngo-browse-food"       && <NGOBrowseFood navigate={navigate} />}
-      {view === "ngo-food-details"      && <NGOFoodDetails navigate={navigate} />}
-      {view === "ngo-my-requests"       && <NGOMyRequests navigate={navigate} />}
-      {view === "ngo-pickup-tracking"   && <DonorPickupTracking navigate={navigate} />}
-      {view === "ngo-notifications"     && <NotificationsPage navigate={navigate} role="ngo" />}
-      {view === "ngo-impact"            && <ImpactDashboard role="ngo" />}
-      {view === "ngo-profile"           && <ProfilePage role="ngo" />}
+      <Route path="/donor/login" element={<DonorLoginPage navigate={navigate} onLogin={(data: any) => handleLogin("donor", data.user, data.token)} />} />
+      <Route path="/donor/register" element={<DonorRegisterPage navigate={navigate} onRegistered={(data: any) => handleLogin("donor", data.user, data.token)} />} />
+      <Route path="/ngo/login" element={<NGOLoginPage navigate={navigate} onLogin={(data: any) => handleLogin("ngo", data.user, data.token)} />} />
+      <Route path="/ngo/register" element={<NGORegisterPage navigate={navigate} onRegistered={(data: any) => handleLogin("ngo", data.user, data.token)} />} />
+      <Route path="/admin/login" element={<AdminLoginPage navigate={navigate} onLogin={(data: any) => handleLogin("admin", data.user, data.token)} />} />
+      <Route path="/password-recovery" element={<PasswordRecoveryPage navigate={navigate} />} />
+      <Route path="/password-reset" element={<PasswordRecoveryPage navigate={navigate} />} />
 
-      {/* ADMIN */}
-      {view === "admin-dashboard"          && <AdminDashboard navigate={navigate} />}
-      {view === "admin-users"              && <AdminUsers navigate={navigate} />}
-      {view === "admin-donors"             && <AdminDonors navigate={navigate} />}
-      {view === "admin-ngos"               && <AdminNGOs navigate={navigate} />}
-      {view === "admin-ngo-verification"   && <AdminNGOVerification navigate={navigate} />}
-      {view === "admin-food-management"    && <AdminFoodManagement navigate={navigate} />}
-      {view === "admin-request-management" && <AdminRequestManagement navigate={navigate} />}
-      {view === "admin-pickup-monitoring"  && <AdminPickupMonitoring navigate={navigate} />}
-      {view === "admin-reports"            && <AdminReports navigate={navigate} />}
-      {view === "admin-settings"           && <AdminSettings navigate={navigate} />}
-    </DashboardLayout>
+      <Route element={<ProtectedLayout requiredRole="donor" role={role} authUser={authUser} onLogout={handleLogout} navigate={navigate} />}>
+        <Route path="/donor/dashboard" element={<DonorDashboard navigate={navigate} />} />
+        <Route path="/donor/add-food" element={<DonorAddFood navigate={navigate} />} />
+        <Route path="/donor/my-donations" element={<DonorMyDonations navigate={navigate} authUser={authUser} />} />
+        <Route path="/donor/donations/:donationId" element={<DonorDonationDetails navigate={navigate} />} />
+        <Route path="/donor/requests" element={<DonorNGORequests navigate={navigate} />} />
+        <Route path="/donor/pickup-tracking" element={<DonorPickupTracking navigate={navigate} />} />
+        <Route path="/donor/notifications" element={<NotificationsPage navigate={navigate} role="donor" />} />
+        <Route path="/donor/impact" element={<ImpactDashboard role="donor" />} />
+        <Route path="/donor/profile" element={<ProfilePage role="donor" />} />
+      </Route>
+
+      <Route element={<ProtectedLayout requiredRole="ngo" role={role} authUser={authUser} onLogout={handleLogout} navigate={navigate} />}>
+        <Route path="/ngo/dashboard" element={<NGODashboard navigate={navigate} />} />
+        <Route path="/ngo/browse-food" element={<NGOBrowseFood navigate={navigate} />} />
+        <Route path="/ngo/food/:foodId" element={<NGOFoodDetails navigate={navigate} />} />
+        <Route path="/ngo/requests" element={<NGOMyRequests navigate={navigate} />} />
+        <Route path="/ngo/pickup-tracking" element={<DonorPickupTracking navigate={navigate} />} />
+        <Route path="/ngo/notifications" element={<NotificationsPage navigate={navigate} role="ngo" />} />
+        <Route path="/ngo/impact" element={<ImpactDashboard role="ngo" />} />
+        <Route path="/ngo/profile" element={<ProfilePage role="ngo" />} />
+      </Route>
+
+      <Route element={<ProtectedLayout requiredRole="admin" role={role} authUser={authUser} onLogout={handleLogout} navigate={navigate} />}>
+        <Route path="/admin/dashboard" element={<AdminDashboard navigate={navigate} />} />
+        <Route path="/admin/users" element={<AdminUsers navigate={navigate} />} />
+        <Route path="/admin/donors" element={<AdminDonors navigate={navigate} />} />
+        <Route path="/admin/ngos" element={<AdminNGOs navigate={navigate} />} />
+        <Route path="/admin/ngo-verification" element={<AdminNGOVerification navigate={navigate} />} />
+        <Route path="/admin/food-management" element={<AdminFoodManagement navigate={navigate} />} />
+        <Route path="/admin/request-management" element={<AdminRequestManagement navigate={navigate} />} />
+        <Route path="/admin/pickup-monitoring" element={<AdminPickupMonitoring navigate={navigate} />} />
+        <Route path="/admin/reports" element={<AdminReports navigate={navigate} />} />
+        <Route path="/admin/settings" element={<AdminSettings navigate={navigate} />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
